@@ -1,0 +1,29 @@
+### --- 秘匿情報・個人設定 (最重要) ---
+# APIキーや環境変数を書くファイル
+.env
+config.yaml
+secrets.json
+
+# 楽天証券などの個人設定ファイル（もし作成する場合）
+settings.local.py
+
+### --- Python 関連 ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+
+### --- Antigravity / IDE 関連 ---
+.vscode/
+.antigravity/
+.idea/
+.DS_Store
+
+### --- アプリケーション・データ ---
+# ローカルで取得した株価キャッシュデータ
+data/*.csv
+data/*.json
+*.log
