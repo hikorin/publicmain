@@ -22,6 +22,11 @@ class AIResearcher:
             return {"error": "API Key not configured."}
 
         # 1. Load Prompt
+        # Fix: Resolve path relative to this file if default path is used and file not found in CWD
+        if prompt_path == "prompt.txt" and not os.path.exists(prompt_path):
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            prompt_path = os.path.join(base_dir, "prompt.txt")
+
         try:
             with open(prompt_path, "r", encoding="utf-8") as f:
                 prompt_content = f.read()
