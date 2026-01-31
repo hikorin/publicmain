@@ -9,7 +9,7 @@ class AIResearcher:
         try:
             self.client = genai.Client(api_key=self.api_key)
             # Default model to try
-            self.model_name = "gemini-2.0-pro" 
+            self.model_name = "gemini-2.5-pro" 
         except Exception as e:
             print(f"Error configuring Gemini: {e}")
             self.client = None
