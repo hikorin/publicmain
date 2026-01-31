@@ -1,0 +1,9 @@
+{
+    "workbench.colorTheme": "Visual Studio Light",
+    "editor.mouseWheelZoom": true,
+    "python.testing.pytestArgs": [
+        "."
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
+}
