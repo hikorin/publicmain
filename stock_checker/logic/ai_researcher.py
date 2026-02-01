@@ -9,12 +9,12 @@ class AIResearcher:
         try:
             self.client = genai.Client(api_key=self.api_key)
             # Default model to try
-            self.model_name = "gemini-2.0-pro" 
+            self.model_name = "gemini-3-pro-preview" 
         except Exception as e:
             print(f"Error configuring Gemini: {e}")
             self.client = None
 
-    def analyze_with_gemini(self, prompt_path="prompt.txt"):
+    def analyze_with_gemini(self, prompt_path="prompt.txt", selected_model=None):
         """
         Loads prompt from file and executes with Google Search Grounding using google-genai SDK.
         """
@@ -43,20 +43,30 @@ class AIResearcher:
             )
 
             # Try preferred models
-            # Based on user availability and stability
-            candidates = [
-                'gemini-2.0-pro', 
-                'gemini-2.0-flash', 
-                'gemini-2.0-flash-001',
+            # If a model is selected in UI, try it first.
+            candidates = []
+            if selected_model:
+                candidates.append(selected_model)
+            
+            candidates.extend([
+                'gemini-3-pro-preview', 
+                'gemini-2.5-flash', 
+                'gemini-2.0-pro-exp-02-05',
                 'gemini-1.5-pro',
                 'gemini-1.5-flash',
-                'gemini-2.0-pro-exp-02-05' # Attempting if available
-            ]
+                'gemini-2.0-flash-001'
+            ])
+            
+            # Deduplicate while preserving order
+            unique_candidates = []
+            for c in candidates:
+                if c not in unique_candidates:
+                    unique_candidates.append(c)
             
             response = None
             errors = []
 
-            for model in candidates:
+            for model in unique_candidates:
                 try:
                     response = self.client.models.generate_content(
                         model=model,

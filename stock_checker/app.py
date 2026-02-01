@@ -1,45 +1,193 @@
 import streamlit as st
+import os
+from dotenv import load_dotenv
 import pandas as pd
 import plotly.graph_objects as go
 from logic.stock_data import StockData
 from logic.scorer import Scorer
+
+# Load environment variables from .env file (for local development)
+# In production (e.g., Render), OS-level env vars take precedence
+load_dotenv()
 
 st.set_page_config(page_title="StockOps-YF v2.1", layout="wide")
 
 # --- Styles ---
 st.markdown("""
 <style>
-    .metric-card {
-        background-color: #1E1E1E;
-        padding: 15px;
-        border-radius: 10px;
-        border: 1px solid #333;
-        text-align: center;
-        margin-bottom: 10px;
-    }
-    .metric-value {
-        font-size: 24px;
-        font-weight: bold;
-        color: #4CAF50;
-    }
-    .metric-label {
-        font-size: 14px;
-        color: #AAA;
-    }
-    .score-circle {
-        font-size: 40px;
-        font-weight: bold;
-        color: #2196F3;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     
-    /* Mobile-friendly adjustments */
-    @media (max-width: 768px) {
-        .metric-value {
-            font-size: 20px;
-        }
-        .metric-label {
-            font-size: 12px;
-        }
+    /* Dark Theme Background */
+    .stApp {
+        background-color: #0a0e1a;
+        background-image: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+                          radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
+        color: #e5e7eb;
+    }
+
+    /* Glassmorphism Card - Higher Contrast */
+    .metric-card {
+        background: rgba(30, 41, 59, 0.4);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.15);
+        padding: 24px;
+        text-align: center;
+        box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.3);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        margin-bottom: 16px;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px -4px rgba(59, 130, 246, 0.3);
+        border-color: rgba(59, 130, 246, 0.4);
+    }
+
+    /* Typography - Solid Colors for Readability */
+    .metric-value {
+        font-size: 2.4rem;
+        font-weight: 700;
+        color: #22d3ee;
+        margin-bottom: 6px;
+        text-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+    }
+    
+    .metric-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #cbd5e1;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    /* Buttons - High Contrast */
+    .stButton > button {
+        width: 100%;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: #ffffff !important;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.5);
+        background: linear-gradient(135deg, #60a5fa, #3b82f6);
+    }
+
+    /* Inputs - Better Visibility */
+    .stTextInput > div > div > input,
+    .stTextInput > div > div > input:focus {
+        background-color: rgba(30, 41, 59, 0.6) !important;
+        color: #f1f5f9 !important;
+        border: 1px solid rgba(148, 163, 184, 0.3) !important;
+        border-radius: 10px;
+    }
+    
+    .stSelectbox > div > div > div {
+        background-color: rgba(30, 41, 59, 0.6);
+        color: #f1f5f9;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    /* Headings - Solid White */
+    h1, h2, h3, h4 {
+        color: #f8fafc !important;
+        font-weight: 700;
+    }
+    
+    h1 {
+        font-size: 2.5rem;
+        letter-spacing: -0.02em;
+    }
+    
+    h2 {
+        color: #e0e7ff !important;
+    }
+    
+    h3 {
+        color: #e0e7ff !important;
+    }
+
+    /* Streamlit Native Elements */
+    .stMetric label {
+        color: #cbd5e1 !important;
+    }
+    
+    .stMetric [data-testid="stMetricValue"] {
+        color: #22d3ee !important;
+    }
+    
+    /* Text Elements */
+    p, span, div {
+        color: #e5e7eb;
+    }
+    
+    .stMarkdown {
+        color: #e5e7eb;
+    }
+
+    /* Expander */
+    .streamlit-expanderHeader {
+        background-color: rgba(30, 41, 59, 0.4);
+        color: #f1f5f9 !important;
+        border-radius: 8px;
+    }
+
+    /* Status/Success Messages */
+    .stSuccess {
+        background-color: rgba(34, 197, 94, 0.1);
+        color: #86efac !important;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    
+    .stError {
+        background-color: rgba(239, 68, 68, 0.1);
+        color: #fca5a5 !important;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    .stInfo {
+        background-color: rgba(59, 130, 246, 0.1);
+        color: #93c5fd !important;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #0a0e1a;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #475569;
+        border-radius: 5px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+    }
+    
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background-color: rgba(15, 23, 42, 0.95);
+    }
+    
+    [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] h3 {
+        color: #f1f5f9 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -167,8 +315,26 @@ st.markdown("---")
 st.markdown("## 🤖 AI 推奨銘柄 (AIリサーチ)")
 st.caption("Gemini + Google検索 (Grounding) による自動分析")
 
-with st.expander("AI設定", expanded=True):
-    api_key = st.text_input("Google Gemini APIキーを入力", type="password", help="aistudio.google.com で無料キーを取得できます")
+# Fixed: Use env var if available
+env_key = os.getenv("GEMINI_API_KEY")
+
+with st.expander("AI設定", expanded=not bool(env_key)):
+    if env_key:
+        st.success("🔐 APIキーが設定されています (環境変数: GEMINI_API_KEY)")
+        api_key = env_key
+    else:
+        api_key = st.text_input("Google Gemini APIキーを入力", type="password", help="aistudio.google.com で無料キーを取得できます")
+    
+    # AI Model Selection
+    model_options = [
+        "gemini-3-pro-preview",
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-2.0-pro-exp-02-05",
+        "gemini-1.5-pro",
+        "gemini-1.5-flash"
+    ]
+    selected_model = st.selectbox("使用するAIモデルを選択", options=model_options, index=0)
 
 if st.button("🚀 AIリサーチ開始"):
     if not api_key:
@@ -182,8 +348,8 @@ if st.button("🚀 AIリサーチ開始"):
             st.write("🔍 Google検索を実行し、最新の市場ニュースを収集しています...")
             st.write("🧠 厳格な基準で分析・選定中...")
             
-            # analyze_with_gemini now reads prompt.txt
-            ai_results = researcher.analyze_with_gemini()
+            # analyze_with_gemini now reads prompt.txt and takes selected_model
+            ai_results = researcher.analyze_with_gemini(selected_model=selected_model)
             
             if "error" in ai_results:
                 status.update(label="❌ エラーが発生しました", state="error", expanded=True)
